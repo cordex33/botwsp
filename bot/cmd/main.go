@@ -7,20 +7,15 @@ import (
 	"os/signal"
 	"syscall"
 
+	"whatsapp-bot/pkg/handler"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
-	"go.mau.fi/whatsmeow/types/events"
+
 	waLog "go.mau.fi/whatsmeow/util/log"
-	_ "github.com/mattn/go-sqlite3"
-
 )
-
-func eventHandler(evt interface{}) {
-	switch v := evt.(type) {
-	case *events.Message:
-		fmt.Println("Received a message!", v.Message.GetConversation())
-	}
-}
 
 func main() {
 	// |------------------------------------------------------------------------------------------------------|
@@ -39,7 +34,8 @@ func main() {
 	}
 	clientLog := waLog.Stdout("Client", "DEBUG", true)
 	client := whatsmeow.NewClient(deviceStore, clientLog)
-	client.AddEventHandler(eventHandler)
+
+	client.AddEventHandler(handler.EventHandler(client))
 
 	if client.Store.ID == nil {
 		// No ID stored, new login
@@ -53,6 +49,7 @@ func main() {
 				// Render the QR code here
 				// e.g. qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 				// or just manually `echo 2@... | qrencode -t ansiutf8` in a terminal
+				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 				fmt.Println("QR code:", evt.Code)
 			} else {
 				fmt.Println("Login event:", evt.Event)
@@ -61,6 +58,7 @@ func main() {
 	} else {
 		// Already logged in, just connect
 		err = client.Connect()
+
 		if err != nil {
 			panic(err)
 		}
